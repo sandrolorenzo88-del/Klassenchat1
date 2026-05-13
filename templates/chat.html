@@ -146,6 +146,11 @@
       flex: 1;
       overflow-y: auto;
       min-height: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: linear-gradient(to bottom, #ffffff, #f8fafc);
     }
 
     .message {
@@ -221,11 +226,6 @@
       background: var(--primary-hover);
     }
 
-    .secondary {
-      background: #eef2f7;
-      color: var(--text);
-    }
-
     .danger {
       background: #fee2e2;
       color: var(--danger);
@@ -260,22 +260,6 @@
     .toast.visible {
       opacity: 1;
       transform: translateY(0);
-    }
-
-    @media (max-width: 820px) {
-      .app {
-        grid-template-columns: 1fr;
-        height: auto;
-      }
-
-      .sidebar {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .message {
-        max-width: 92%;
-      }
     }
   </style>
 </head>
@@ -322,7 +306,7 @@
       </div>
 
       <form class="composer" id="composer">
-        <textarea id="messageInput" placeholder="Nachricht schreiben …" aria-label="Nachricht"></textarea>
+        <textarea id="messageInput" placeholder="Nachricht schreiben …"></textarea>
         <button type="submit" class="primary">Senden</button>
       </form>
     </section>
@@ -330,7 +314,11 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
   <script>
+    const socket = io();
+
     const participantList = document.getElementById('participantList');
     const messagesContainer = document.getElementById('messages');
     const emptyState = document.getElementById('emptyState');
@@ -342,18 +330,8 @@
 
     let currentUser = null;
 
-    const participants = [
-      { name: 'Lea', online: true },
-      { name: 'Noah', online: true }
-    ];
-
-    const messages = [
-      {
-        sender: 'Lea',
-        text: 'Willkommen im Klassenraumchat 👋',
-        time: '08:30'
-      }
-    ];
+    const participants = [];
+    const messages = [];
 
     function renderParticipants() {
       participantList.innerHTML = '';
@@ -418,19 +396,13 @@
       }
 
       currentUser = name;
-      participants.push({ name, online: true });
-      renderParticipants();
+
+      socket.emit('join', {
+        username: currentUser
+      });
 
       statusText.textContent = `Verbunden als ${name}`;
       showToast('Klassenraum erfolgreich beigetreten.');
-
-      messages.push({
-        sender: 'System',
-        text: `${name} ist dem Klassenraum beigetreten.`,
-        time: getTime()
-      });
-
-      renderMessages();
     }
 
     function leaveRoom() {
@@ -439,23 +411,14 @@
         return;
       }
 
-      const leavingUser = currentUser;
-
-      const index = participants.findIndex(user => user.name === currentUser);
-      if (index !== -1) participants.splice(index, 1);
-
-      currentUser = null;
-      renderParticipants();
-
-      statusText.textContent = 'Nicht verbunden';
-
-      messages.push({
-        sender: 'System',
-        text: `${leavingUser} hat den Klassenraum verlassen.`,
-        time: getTime()
+      socket.emit('leave', {
+        username: currentUser
       });
 
-      renderMessages();
+      statusText.textContent = 'Nicht verbunden';
+      currentUser = null;
+
+      renderParticipants();
       showToast('Klassenraum verlassen.');
     }
 
@@ -474,13 +437,11 @@
         return;
       }
 
-      messages.push({
+      socket.emit('send_message', {
         sender: currentUser,
-        text,
-        time: getTime()
+        text: text
       });
 
-      renderMessages();
       messageInput.value = '';
     }
 
@@ -507,85 +468,58 @@
       return div.innerHTML;
     }
 
+    socket.on('participants', data => {
+      participants.length = 0;
+
+      data.forEach(name => {
+        participants.push({
+          name,
+          online: true
+        });
+      });
+
+      renderParticipants();
+    });
+
+    socket.on('message', data => {
+      messages.push({
+        sender: data.sender,
+        text: data.text,
+        time: getTime()
+      });
+
+      renderMessages();
+    });
+
+    socket.on('message_history', history => {
+      messages.length = 0;
+
+      history.forEach(msg => {
+        messages.push({
+          sender: msg.sender,
+          text: msg.text,
+          time: getTime()
+        });
+      });
+
+      renderMessages();
+    });
+
+    socket.emit('get_state');
+
     document.getElementById('joinBtn').addEventListener('click', joinRoom);
     document.getElementById('leaveBtn').addEventListener('click', leaveRoom);
     document.getElementById('composer').addEventListener('submit', sendMessage);
 
-    function simulateActivity() {
-      const sampleUsers = ['Mia', 'Luca', 'Emma', 'Jonas', 'Sophie', 'Ben'];
-      const sampleMessages = [
-        'Hallo zusammen 👋',
-        'Wann beginnt die Gruppenarbeit?',
-        'Ich lade später noch die Unterlagen hoch.',
-        'Hat jemand die Hausaufgaben verstanden?',
-        'Danke für die Infos!',
-        'Bis später 😊'
-      ];
-
-      setInterval(() => {
-        const shouldJoin = participants.length < 6 && Math.random() > 0.4;
-
-        if (shouldJoin) {
-          const availableUsers = sampleUsers.filter(
-            name => !participants.some(user => user.name === name)
-          );
-
-          if (availableUsers.length === 0) return;
-
-          const newUser = availableUsers[Math.floor(Math.random() * availableUsers.length)];
-
-          participants.push({
-            name: newUser,
-            online: true
-          });
-
-          messages.push({
-            sender: 'System',
-            text: `${newUser} ist dem Klassenraum beigetreten.`,
-            time: getTime()
-          });
-
-          if (Math.random() > 0.3) {
-            messages.push({
-              sender: newUser,
-              text: sampleMessages[Math.floor(Math.random() * sampleMessages.length)],
-              time: getTime()
-            });
-          }
-
-          renderParticipants();
-          renderMessages();
-          return;
-        }
-
-        const removableUsers = participants.filter(
-          user => user.name !== currentUser && user.name !== 'Lea'
-        );
-
-        if (removableUsers.length === 0) return;
-
-        const leavingUser = removableUsers[Math.floor(Math.random() * removableUsers.length)];
-
-        const index = participants.findIndex(user => user.name === leavingUser.name);
-        if (index !== -1) {
-          participants.splice(index, 1);
-        }
-
-        messages.push({
-          sender: 'System',
-          text: `${leavingUser.name} hat den Klassenraum verlassen.`,
-          time: getTime()
-        });
-
-        renderParticipants();
-        renderMessages();
-      }, 7000);
-    }
-
     renderParticipants();
     renderMessages();
-    simulateActivity();
   </script>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </body>
 </html>
+```
+
+Zusätzlich muss deine `app.py` Flask-SocketIO verwenden und dein Render Start Command auf folgendes geändert werden:
+
+```bash
+gunicorn --worker-class eventlet -w 1 app:app
+```
