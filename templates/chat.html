@@ -516,10 +516,5 @@
   </script>
 </body>
 </html>
-```
-
-Zusätzlich muss deine `app.py` Flask-SocketIO verwenden und dein Render Start Command auf folgendes geändert werden:
-
-```bash
-gunicorn --worker-class eventlet -w 1 app:app
+class eventlet -w 1 app:app
 ```
