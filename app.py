@@ -41,6 +41,7 @@ def upload_file():
     return {
         'url': f'/static/uploads/{filename}'
     }
+@app.route("/")
 def index():
     return render_template("chat.html")
 
