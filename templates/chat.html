@@ -1,547 +1,73 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Privater Chat</title>
-  <style>
-    :root {
-      --bg: #f4f6f8;
-      --surface: #ffffff;
-      --border: #d9dee5;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --success: #16a34a;
-      --danger: #dc2626;
-      --shadow: 0 2px 8px rgba(0,0,0,0.06);
-      --radius: 14px;
-    }
+            const reader = new FileReader();
 
-    * {
-      box-sizing: border-box;
-    }
+            reader.onload = function(e) {
+                socket.emit('message', {
+                    username: currentUser,
+                    text: text,
+                    image: e.target.result
+                });
+            };
 
-    body {
-      margin: 0;
-      font-family: Inter, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
-    .app {
-      width: 100%;
-      max-width: 1100px;
-      height: 88vh;
-      background: var(--surface);
-      border-radius: 24px;
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      display: grid;
-      grid-template-columns: 300px 1fr;
-    }
-
-    .sidebar {
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      background: #fafbfc;
-    }
-
-    .sidebar-header {
-      padding: 24px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .sidebar-header h1 {
-      margin: 0;
-      font-size: 1.4rem;
-    }
-
-    .sidebar-header p {
-      margin: 8px 0 0;
-      color: var(--muted);
-      line-height: 1.4;
-      font-size: 0.95rem;
-    }
-
-    .join-box {
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .participants {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 24px;
-    }
-
-    .participants h2 {
-      margin-top: 0;
-      font-size: 1rem;
-    }
-
-    .participant {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: white;
-      border: 1px solid var(--border);
-      margin-bottom: 10px;
-    }
-
-    .participant-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .status {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--success);
-    }
-
-    .chat {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      overflow: hidden;
-      min-height: 0;
-    }
-
-    .chat-header {
-      padding: 20px 28px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: white;
-    }
-
-    .chat-header h2 {
-      margin: 0;
-      font-size: 1.2rem;
-    }
-
-    .chat-header span {
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      min-height: 0;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      background: linear-gradient(to bottom, #ffffff, #f8fafc);
-    }
-
-    .message {
-      max-width: 75%;
-      padding: 14px 16px;
-      border-radius: 18px;
-      background: white;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-    }
-
-    .message.own {
-      align-self: flex-end;
-      background: #e8f0ff;
-      border-color: #bfd3ff;
-    }
-
-    .meta {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      font-size: 0.8rem;
-      color: var(--muted);
-      gap: 12px;
-    }
-
-    .composer {
-      border-top: 1px solid var(--border);
-      padding: 18px 24px;
-      display: flex;
-      gap: 12px;
-      background: white;
-    }
-
-    input, textarea, button {
-      font: inherit;
-    }
-
-    input, textarea {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    input:focus, textarea:focus {
-      border-color: var(--primary);
-    }
-
-    textarea {
-      resize: none;
-      min-height: 54px;
-      max-height: 120px;
-    }
-
-    button {
-      border: none;
-      border-radius: 12px;
-      padding: 12px 18px;
-      cursor: pointer;
-      transition: 0.2s;
-      font-weight: 600;
-    }
-
-    .primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .primary:hover {
-      background: var(--primary-hover);
-    }
-
-    .danger {
-      background: #fee2e2;
-      color: var(--danger);
-    }
-
-    .hint {
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-
-    .empty {
-      text-align: center;
-      color: var(--muted);
-      margin-top: 60px;
-      line-height: 1.5;
-    }
-
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #111827;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 12px;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: 0.2s ease;
-      pointer-events: none;
-    }
-
-    .toast.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  </style>
-</head>
-<body>
-  <main class="app" aria-label="Klassenraumchat">
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h1>Privater Chat</h1>
-      </div>
-
-      <section class="join-box">
-        <label for="username"><strong>Name</strong></label>
-        <input id="username" type="text" placeholder="z. B. Sandro" maxlength="20" />
-
-        <div style="display:flex; gap:10px;">
-          <button class="primary" id="joinBtn">Beitreten</button>
-          <button class="danger" id="leaveBtn">Verlassen</button>
-        </div>
-
-        <div class="hint" id="statusText">Nicht verbunden</div>
-      </section>
-
-      <section class="participants">
-        <h2>Aktive Teilnehmende</h2>
-        <div id="participantList"></div>
-      </section>
-    </aside>
-
-    <section class="chat">
-      <header class="chat-header">
-        <div>
-          <h2>Klassenraum A</h2>
-          <span>Gemeinsamer Nachrichtenverlauf</span>
-        </div>
-        <span id="messageCount">0 Nachrichten</span>
-      </header>
-
-      <div class="messages" id="messages">
-        <div class="empty" id="emptyState">
-          Noch keine Nachrichten vorhanden.<br />
-          Trete dem Klassenraum bei und sende die erste Nachricht.
-        </div>
-      </div>
-
-      <form class="composer" id="composer">
-        <textarea id="messageInput" placeholder="Nachricht schreiben …"></textarea>
-        <input type="file" id="imageInput" accept="image/*">
-        <button type="submit" class="primary">Senden</button>
-      </form>
-    </section>
-  </main>
-
-  <div class="toast" id="toast"></div>
-
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
-  <script>
-    const socket = io();
-
-    const participantList = document.getElementById('participantList');
-    const messagesContainer = document.getElementById('messages');
-    const emptyState = document.getElementById('emptyState');
-    const messageCount = document.getElementById('messageCount');
-    const usernameInput = document.getElementById('username');
-    const messageInput = document.getElementById('messageInput');
-    const imageInput = document.getElementById('imageInput');
-    const statusText = document.getElementById('statusText');
-    const toast = document.getElementById('toast');
-
-    let currentUser = null;
-
-    const participants = [];
-    const messages = [];
-
-    function renderParticipants() {
-      participantList.innerHTML = '';
-
-      participants.forEach(user => {
-        const item = document.createElement('div');
-        item.className = 'participant';
-
-        item.innerHTML = `
-          <div class="participant-info">
-            <span class="status"></span>
-            <span>${user.name}</span>
-          </div>
-          <small>online</small>
-        `;
-
-        participantList.appendChild(item);
-      });
-    }
-
-    function renderMessages() {
-      messagesContainer.innerHTML = '';
-
-      if (messages.length === 0) {
-        messagesContainer.appendChild(emptyState);
-      }
-
-      messages.forEach(msg => {
-        const message = document.createElement('article');
-        message.className = 'message';
-
-        if (msg.sender === currentUser) {
-          message.classList.add('own');
+            reader.readAsDataURL(file);
+        } else {
+            socket.emit('message', {
+                username: currentUser,
+                text: text,
+                image: null
+            });
         }
 
-        message.innerHTML = `
-          <div class="meta">
-            <strong>${msg.sender}</strong>
-            <span>${msg.time}</span>
-          </div>
-          <div>${msg.text}</div>
-        `;
-
-        messagesContainer.appendChild(message);
-      });
-
-      messageCount.textContent = `${messages.length} Nachricht${messages.length !== 1 ? 'en' : ''}`;
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
-    function joinRoom() {
-      const name = usernameInput.value.trim();
-
-      if (!name) {
-        showToast('Bitte einen Namen eingeben.');
-        return;
-      }
-
-      if (currentUser) {
-        showToast('Du bist bereits im Klassenraum.');
-        return;
-      }
-
-      currentUser = name;
-
-      socket.emit('join', {
-        username: currentUser
-      });
-
-      statusText.textContent = `Verbunden als ${name}`;
-      showToast('Klassenraum erfolgreich beigetreten.');
-    }
-
-    function leaveRoom() {
-      if (!currentUser) {
-        showToast('Du bist aktuell nicht verbunden.');
-        return;
-      }
-
-      socket.emit('leave', {
-        username: currentUser
-      });
-
-      statusText.textContent = 'Nicht verbunden';
-      currentUser = null;
-
-      renderParticipants();
-      showToast('Klassenraum verlassen.');
-    }
-
-    async function sendMessage(event) {
-      event.preventDefault();
-
-      if (!currentUser) {
-        showToast('Bitte zuerst dem Klassenraum beitreten.');
-        return;
-      }
-
-      async function uploadImage() {
-        const file = imageInput.files[0];
-
-        if (!file) return null;
-
-        const formData = new FormData();
-        formData.append('image', file);
-
-        const response = await fetch('/upload', {
-          method: 'POST',
-          body: formData
-  });
-
-  const data = await response.json();
-
-  imageInput.value = '';
-
-  return data.url;
-}
-
-      const text = messageInput.value.trim();
-
-      const imageUrl = await uploadImage();
-
-      if (!text) {
-        showToast('Leere Nachrichten sind nicht erlaubt.');
-        return;
-      }
-
-let content = text;
-
-if (imageUrl) {
-  content += `<br><img src="${imageUrl}" style="max-width:240px;border-radius:12px;">`;
-}
-
-socket.emit('send_message', {
-    sender: currentUser,
-    text: content
-});
-
-      messageInput.value = '';
-    }
-
-    function getTime() {
-      return new Date().toLocaleTimeString('de-CH', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-
-    function showToast(text) {
-      toast.textContent = text;
-      toast.classList.add('visible');
-
-      clearTimeout(window.toastTimer);
-      window.toastTimer = setTimeout(() => {
-        toast.classList.remove('visible');
-      }, 2400);
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+        messageInput.value = '';
+        imageInput.value = '';
     }
 
     socket.on('participants', data => {
-      participants.length = 0;
+        const participantsList = document.getElementById('participants');
 
-      data.forEach(name => {
-        participants.push({
-          name,
-          online: true
+        participantsList.innerHTML = '';
+
+        data.forEach(name => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="status"></span>${name}`;
+            participantsList.appendChild(li);
         });
-      });
-
-      renderParticipants();
     });
 
     socket.on('message', data => {
-      messages.push({
-        sender: data.sender,
-        text: data.text,
-        time: getTime()
-      });
-
-      renderMessages();
+        addMessage(data);
     });
 
-    socket.on('message_history', history => {
-      messages.length = 0;
+    socket.on('messages', data => {
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = '';
 
-      history.forEach(msg => {
-        messages.push({
-          sender: msg.sender,
-          text: msg.text,
-          time: getTime()
-        });
-      });
-
-      renderMessages();
+        data.forEach(addMessage);
     });
 
-    socket.emit('get_state');
+    function addMessage(data) {
+        const messagesDiv = document.getElementById('messages');
 
-    document.getElementById('joinBtn').addEventListener('click', joinRoom);
-    document.getElementById('leaveBtn').addEventListener('click', leaveRoom);
-    document.getElementById('composer').addEventListener('submit', sendMessage);
+        const div = document.createElement('div');
+        div.className = 'message';
 
-    renderParticipants();
-    renderMessages();
-  </script>
+        let html = `<strong>${data.username}</strong>`;
+
+        if (data.text) {
+            html += `<p>${data.text}</p>`;
+        }
+
+        if (data.image) {
+            html += `<img src="${data.image}" alt="Bild">`;
+        }
+
+        div.innerHTML = html;
+
+        messagesDiv.appendChild(div);
+
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+</script>
+
 </body>
 </html>
