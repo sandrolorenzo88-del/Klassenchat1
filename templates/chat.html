@@ -373,7 +373,7 @@
             <strong>${msg.sender}</strong>
             <span>${msg.time}</span>
           </div>
-          <div>${escapeHtml(msg.text)}</div>
+          <div>${msg.text}</div>
         `;
 
         messagesContainer.appendChild(message);
@@ -423,7 +423,7 @@
       showToast('Klassenraum verlassen.');
     }
 
-    function sendMessage(event) {
+    async function sendMessage(event) {
       event.preventDefault();
 
       if (!currentUser) {
@@ -431,17 +431,45 @@
         return;
       }
 
+      async function uploadImage() {
+        const file = imageInput.files[0];
+
+        if (!file) return null;
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+  });
+
+  const data = await response.json();
+
+  imageInput.value = '';
+
+  return data.url;
+}
+
       const text = messageInput.value.trim();
+
+      const imageUrl = await uploadImage();
 
       if (!text) {
         showToast('Leere Nachrichten sind nicht erlaubt.');
         return;
       }
 
-      socket.emit('send_message', {
-        sender: currentUser,
-        text: text
-      });
+let content = text;
+
+if (imageUrl) {
+  content += `<br><img src="${imageUrl}" style="max-width:240px;border-radius:12px;">`;
+}
+
+socket.emit('send_message', {
+    sender: currentUser,
+    text: content
+});
 
       messageInput.value = '';
     }
