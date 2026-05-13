@@ -1,7 +1,258 @@
 <!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klassenchat</title>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f3f4f6;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 15px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .join-btn {
+            background: #2563eb;
+            color: white;
+        }
+
+        .leave-btn {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 10px;
+        }
+
+        .message strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .message img {
+            max-width: 300px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .chat-input input[type="text"] {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .participants {
+            list-style: none;
+        }
+
+        .participants li {
+            padding: 8px 0;
+        }
+
+        .status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="sidebar">
+
+        <div class="sidebar-section">
+            <h2>Privater Chat</h2>
+
+            <input type="text" id="username" placeholder="Name eingeben">
+
+            <div style="display:flex; gap:10px;">
+                <button class="join-btn" onclick="joinChat()">
+                    Beitreten
+                </button>
+
+                <button class="leave-btn" onclick="leaveChat()">
+                    Verlassen
+                </button>
+            </div>
+
+            <p id="status" style="margin-top:10px;"></p>
+        </div>
+
+        <div class="sidebar-section">
+            <h2>Aktive Teilnehmende</h2>
+            <ul id="participants" class="participants"></ul>
+        </div>
+
+    </div>
+
+    <div class="chat">
+
+        <div class="chat-header">
+            <h2>Klassenraum A</h2>
+            <p>Gemeinsamer Nachrichtenverlauf</p>
+        </div>
+
+        <div id="messages" class="messages"></div>
+
+        <div class="chat-input">
+
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Nachricht schreiben ..."
+            >
+
+            <input type="file" id="imageInput">
+
+            <button class="join-btn" onclick="sendMessage()">
+                Senden
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    const socket = io(window.location.origin);
+
+    let currentUser = null;
+
+    function joinChat() {
+
+        const username =
+            document.getElementById('username').value.trim();
+
+        if (!username) {
+            alert('Bitte Namen eingeben');
+            return;
+        }
+
+        currentUser = username;
+
+        socket.emit('join', username);
+
+        document.getElementById('status').innerText =
+            `Verbunden als ${username}`;
+    }
+
+    function leaveChat() {
+
+        if (!currentUser) return;
+
+        socket.emit('leave', currentUser);
+
+        document.getElementById('status').innerText =
+            'Nicht verbunden';
+
+        currentUser = null;
+    }
+
+    function sendMessage() {
+
+        if (!currentUser) {
+            alert('Bitte zuerst beitreten');
+            return;
+        }
+
+        const text =
+            document.getElementById('messageInput').value.trim();
+
+        const file =
+            document.getElementById('imageInput').files[0];
+
+        if (!text && !file) {
+            return;
+        }
+
+        if (file) {
+
             const reader = new FileReader();
 
             reader.onload = function(e) {
+
                 socket.emit('message', {
                     username: currentUser,
                     text: text,
@@ -10,7 +261,9 @@
             };
 
             reader.readAsDataURL(file);
+
         } else {
+
             socket.emit('message', {
                 username: currentUser,
                 text: text,
@@ -18,18 +271,24 @@
             });
         }
 
-        messageInput.value = '';
-        imageInput.value = '';
+        document.getElementById('messageInput').value = '';
+        document.getElementById('imageInput').value = '';
     }
 
     socket.on('participants', data => {
-        const participantsList = document.getElementById('participants');
+
+        const participantsList =
+            document.getElementById('participants');
 
         participantsList.innerHTML = '';
 
         data.forEach(name => {
+
             const li = document.createElement('li');
-            li.innerHTML = `<span class="status"></span>${name}`;
+
+            li.innerHTML =
+                `<span class="status"></span>${name}`;
+
             participantsList.appendChild(li);
         });
     });
@@ -39,16 +298,22 @@
     });
 
     socket.on('messages', data => {
-        const messagesDiv = document.getElementById('messages');
+
+        const messagesDiv =
+            document.getElementById('messages');
+
         messagesDiv.innerHTML = '';
 
         data.forEach(addMessage);
     });
 
     function addMessage(data) {
-        const messagesDiv = document.getElementById('messages');
+
+        const messagesDiv =
+            document.getElementById('messages');
 
         const div = document.createElement('div');
+
         div.className = 'message';
 
         let html = `<strong>${data.username}</strong>`;
@@ -65,8 +330,10 @@
 
         messagesDiv.appendChild(div);
 
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        messagesDiv.scrollTop =
+            messagesDiv.scrollHeight;
     }
+
 </script>
 
 </body>
