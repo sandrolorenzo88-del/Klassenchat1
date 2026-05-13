@@ -1,7 +1,7 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Klassenraumchat läuft!"
+    return send_from_directory(".", "minimaler_klassenraumchat_mvp_ui (1).html")
