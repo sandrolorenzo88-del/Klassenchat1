@@ -1,11 +1,9 @@
 import os
-socketio = SocketIO(
-    app,
-    cors_allowed_origins='*',
-    async_mode='gevent'
-)
+import eventlet
 
-from flask import Flask, render_template, request
+eventlet.monkey_patch()
+
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
@@ -45,6 +43,7 @@ def handle_leave(username):
 
 @socketio.on('message')
 def handle_message(data):
+
     if not data:
         return
 
