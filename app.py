@@ -1,10 +1,14 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory
+from werkzeug.utils import secure_filename
+import os
 from flask_socketio import SocketIO, emit
 from models import db, Message
 from datetime import datetime
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["SECRET_KEY"] = "secret"
@@ -18,7 +22,25 @@ with app.app_context():
 participants = []
 messages = []
 user_sessions = {}
-@app.route("/")
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'image' not in request.files:
+        return {'error': 'Keine Datei'}, 400
+
+    file = request.files['image']
+
+    if file.filename == '':
+        return {'error': 'Keine Datei gewählt'}, 400
+
+    filename = secure_filename(file.filename)
+
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    file.save(path)
+
+    return {
+        'url': f'/static/uploads/{filename}'
+    }
 def index():
     return render_template("chat.html")
 
