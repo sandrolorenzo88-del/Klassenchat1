@@ -1,4 +1,1 @@
-__pycache__/
-*.pyc
-.env
-.venv/
+web: gunicorn --worker-class eventlet -w 1 app:app
