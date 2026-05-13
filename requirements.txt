@@ -1,6 +1,4 @@
-# Klassenraumchat MVP
-
-Minimaler Flask-basierter Klassenchat für Deployment auf Render.
+## Klassenraumchat MVP
 
 ## Features
 
