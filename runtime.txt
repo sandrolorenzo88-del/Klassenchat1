@@ -1,7 +1,1 @@
-services:
-  - type: web
-    name: klassenraumchat
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app:app"
-    plan: free
+python-3.11.9
