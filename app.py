@@ -62,18 +62,18 @@ def handle_leave(data):
 @socketio.on("send_message")
 def handle_message(data):
     message = {
-    "sender": data["sender"],
-    "text": data["text"],
-    "time": datetime.now().strftime('%H:%M')
+        "sender": data["sender"],
+        "text": data["text"],
+        "time": datetime.now().strftime('%H:%M')
     }
 
     new_message = Message(
-    sender=data["sender"],
-    text=data["text"]
-)
+        sender=data["sender"],
+        text=data["text"]
+    )
 
-db.session.add(new_message)
-db.session.commit()
+    db.session.add(new_message)
+    db.session.commit()
 
     emit("message", message, broadcast=True)
 
